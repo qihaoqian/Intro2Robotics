@@ -17,8 +17,8 @@ node_modules/
 Thumbs.db
 
 # 忽略数据
-__pycache__/
-data/cam/
-data/imu/
-data/vicon/
-pic/
+Project1/__pycache__/
+Project1/data/cam/
+Project1/data/imu/
+Project1/data/vicon/
+Project1/pic/
