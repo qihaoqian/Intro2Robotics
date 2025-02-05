@@ -17,19 +17,19 @@ def read_data(fname):
     return data
 
 def load_imu_dataset(dataset_num):
-    ifile = f"data/imu/imuRaw{dataset_num}.p"
+    ifile = f"../data/imu/imuRaw{dataset_num}.p"
     ts = tic()
     imu_data = read_data(ifile)
     toc(ts, "Data import")    
     return imu_data
 def load_vicon_dataset(dataset_num):
-    vfile = f"data/vicon/viconRot{dataset_num}.p"
+    vfile = f"../data/vicon/viconRot{dataset_num}.p"
     ts = tic()
     vicon_data = read_data(vfile)
     toc(ts, "Data import")
     return vicon_data
 def load_cam_dataset(dataset_num):
-    cfile = f"data/cam/cam{dataset_num}.p"
+    cfile = f"../data/cam/cam{dataset_num}.p"
     ts = tic()
     cam_data = read_data(cfile)
     toc(ts, "Data import")
