@@ -1,1 +1,1 @@
-code for UCSD ECE 276A projects
+code for robot intro course project
