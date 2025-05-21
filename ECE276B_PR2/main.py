@@ -72,8 +72,49 @@ def draw_block_list(ax,blocks):
     h = ax.add_collection3d(pc)
     return h
 
+def plot_performance(labels, lengths, times):
+    x = np.arange(len(labels))
+    width = 0.4
 
-def runtest(mapfile, start, goal, verbose = True):
+    fig, ax1 = plt.subplots(figsize=(10, 5))
+
+    # Left axis: path length, set to blue
+    color1 = 'C0'
+    bars1 = ax1.bar(x - width/2, lengths, width,
+                    label='Path Length',
+                    color=color1)
+    ax1.set_ylabel('Path Length', color=color1)
+    ax1.tick_params(axis='y', labelcolor=color1)
+    ax1.set_ylim(0, max(lengths)*1.1)
+
+    # Right axis: planning time, set to orange
+    ax2 = ax1.twinx()
+    color2 = 'C1'
+    bars2 = ax2.bar(x + width/2, times, width,
+                    label='Planning Time (s)',
+                    color=color2)
+    ax2.set_ylabel('Planning Time (s)', color=color2)
+    ax2.tick_params(axis='y', labelcolor=color2)
+    ax2.set_ylim(0, max(times)*1.1)
+
+    # X axis settings
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(labels, rotation=45, ha='right')
+    ax1.set_title('Comparison of Path Length and Planning Time for Each Test')
+
+    # 注：bars1, bars2 是上面创建的两个 BarContainer
+    ax1.bar_label(bars1, fmt='%.2f', padding=3, color=color1)  # 路径长度保留两位小数
+    ax2.bar_label(bars2, fmt='%.2f', padding=3, color=color2)  # 时间保留三位小数
+
+    # Only pass in the two legend handles we want, avoiding internal artist
+    ax1.legend([bars1, bars2],
+               [bars1.get_label(), bars2.get_label()],
+               loc='upper left')
+
+    plt.tight_layout()
+    plt.show(block=True)
+
+def runtest(mapfile, start, goal, verbose = False, weight=1.0, res=0.5):
   '''
   This function:
    * loads the provided mapfile
@@ -84,7 +125,7 @@ def runtest(mapfile, start, goal, verbose = True):
   '''
   # Load a map and instantiate a motion planner
   boundary, blocks = load_map(mapfile)
-  MP = Planner.MyPlanner(boundary=boundary, blocks=blocks) # TODO: replace this with your own planner implementation
+  MP = Planner.MyPlanner(boundary=boundary, blocks=blocks, weight=weight, res=res) # TODO: replace this with your own planner implementation
   
   # Display the environment
   if verbose:
@@ -93,7 +134,9 @@ def runtest(mapfile, start, goal, verbose = True):
   # Call the motion planner
   t0 = tic()
   path = MP.plan(start, goal)
-  toc(t0,"Planning")
+  delta_time = time.time() - t0
+  # toc(t0,"Planning")
+  
   
   # Plot the path
   if verbose:
@@ -106,87 +149,35 @@ def runtest(mapfile, start, goal, verbose = True):
   goal_reached = sum((path[-1]-goal)**2) <= 0.1
   success = (not collision) and goal_reached
   pathlength = np.sum(np.sqrt(np.sum(np.diff(path,axis=0)**2,axis=1)))
-  return success, pathlength
-
-
-def test_single_cube(verbose = True):
-  print('Running single cube test...\n') 
-  start = np.array([7.0, 7.0, 5.5])
-  goal = np.array([2.3, 2.3, 1.3])
-  success, pathlength = runtest('./maps/single_cube.txt', start, goal, verbose)
-  print('Success: %r'%success)
-  print('Path length: %f'%pathlength)
-  print('\n')
-  
-
-def test_maze(verbose = True):
-  print('Running maze test...\n') 
-  start = np.array([0.0, 0.0, 1.0])
-  goal = np.array([12.0, 12.0, 5.0])
-  success, pathlength = runtest('./maps/maze.txt', start, goal, verbose)
-  print('Success: %r'%success)
-  print('Path length: %f'%pathlength)
-  print('\n')
-
-    
-def test_window(verbose = True):
-  print('Running window test...\n') 
-  start = np.array([6, -4.9, 2.8])
-  goal = np.array([2.0, 19.5, 5.5])
-  success, pathlength = runtest('./maps/window.txt', start, goal, verbose)
-  print('Success: %r'%success)
-  print('Path length: %f'%pathlength)
-  print('\n')
-
-  
-def test_tower(verbose = True):
-  print('Running tower test...\n') 
-  start = np.array([4.0, 2.5, 19.5])
-  goal = np.array([2.5, 4.0, 0.5])
-  success, pathlength = runtest('./maps/tower.txt', start, goal, verbose)
-  print('Success: %r'%success)
-  print('Path length: %f'%pathlength)
-  print('\n')
-
-     
-def test_flappy_bird(verbose = True):
-  print('Running flappy bird test...\n') 
-  start = np.array([0.5, 4.5, 5.5])
-  goal = np.array([19.5, 1.5, 1.5])
-  success, pathlength = runtest('./maps/flappy_bird.txt', start, goal, verbose)
-  print('Success: %r'%success)
-  print('Path length: %f'%pathlength) 
-  print('\n')
-
-  
-def test_room(verbose = True):
-  print('Running room test...\n') 
-  start = np.array([1.0, 5.0, 1.5])
-  goal = np.array([9.0, 7.0, 1.5])
-  success, pathlength = runtest('./maps/room.txt', start, goal, verbose)
-  print('Success: %r'%success)
-  print('Path length: %f'%pathlength)
-  print('\n')
-
-def test_pillars(verbose = True):
-  print('Running pillars test...\n') 
-  start = np.array([0.5, 0.5, 0.5])
-  goal = np.array([19, 19, 9])
-  success, pathlength = runtest('./maps/pillars.txt', start, goal, verbose)
-  print('Success: %r'%success)
-  print('Path length: %f'%pathlength)
-  print('\n')
-
+  return success, pathlength, delta_time
 
 if __name__=="__main__":
-  # test_single_cube()
-  # test_maze()
-  # test_flappy_bird()
-  test_pillars()
-  # test_window()
-  # test_tower()
-  # test_room()
-  plt.show(block=True)
+  # name, fname, start, goal, weight, step_size
+    tests = [
+        ("single_cube",    "./maps/single_cube.txt",    np.array([7.0,7.0,5.5]),  np.array([2.3,2.3,1.3]), 1.5, 0.3),
+        ("maze",           "./maps/maze.txt",           np.array([0.0,0.0,1.0]),  np.array([12.0,12.0,5.0]), 1.5, 0.5),
+        ("flappy_bird",    "./maps/flappy_bird.txt",    np.array([0.5,4.5,5.5]),  np.array([19.5,1.5,1.5]), 1.5, 0.5),
+        ("pillars",        "./maps/pillars.txt",        np.array([0.5,0.5,0.5]),  np.array([19.0,19.0,9.0]), 1.5, 0.5),
+        ("window",         "./maps/window.txt",         np.array([6.0,-4.9,2.8]), np.array([2.0,19.5,5.5]), 1.5, 0.5),
+        ("tower",          "./maps/tower.txt",          np.array([4.0,2.5,19.5]), np.array([2.5,4.0,0.5]), 1.5, 0.5),
+        ("room",           "./maps/room.txt",           np.array([1.0,5.0,1.5]),  np.array([9.0,7.0,1.5]), 1.5, 0.5),
+    ]
+
+    labels = []
+    lengths = []
+    times   = []
+    for name, fname, start, goal, weight, res in tests:
+        success, L, T = runtest(fname, start, goal, weight=weight, res=res)
+        if success:
+          labels.append(name)
+          lengths.append(L)
+          times.append(T)
+          print("Test", name, "passed", "length:", L, "time:", T)
+        else:
+          print("Test", name, "failed")
+    
+    # Plot the performance
+    plot_performance(labels, lengths, times)
 
 
 

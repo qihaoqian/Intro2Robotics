@@ -1,0 +1,30 @@
+# 忽略临时文件
+*.log
+*.tmp
+*.pyc
+*.npy
+*.pkl
+
+# 忽略编译生成的文件
+build/
+dist/
+
+# 忽略 Python 虚拟环境
+venv/
+
+# 忽略 node_modules
+node_modules/
+
+# 忽略系统文件
+.DS_Store
+Thumbs.db
+
+# 忽略数据
+__pycache__/
+data/
+docs/
+pics/
+results/
+starter_code/.vscode/
+starter_code/envs/
+starter_code/gif/

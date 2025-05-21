@@ -1,11 +1,12 @@
 import numpy as np
 
 class MyPlanner:
-  __slots__ = ['boundary', 'blocks']
+  __slots__ = ['boundary', 'blocks', 'res']
 
-  def __init__(self, boundary, blocks):
+  def __init__(self, boundary, blocks, res=0.5):
     self.boundary = boundary
     self.blocks = blocks
+    self.res = res
 
 
   def plan(self,start,goal):
@@ -14,7 +15,7 @@ class MyPlanner:
     [dX,dY,dZ] = np.meshgrid([-1,0,1],[-1,0,1],[-1,0,1])
     dR = np.vstack((dX.flatten(),dY.flatten(),dZ.flatten()))
     dR = np.delete(dR,13,axis=1)
-    dR = dR / np.sqrt(np.sum(dR**2,axis=0)) / 2.0
+    dR = dR / np.sqrt(np.sum(dR**2,axis=0)) * self.res
     
     for _ in range(2000):
       mindisttogoal = 1000000
