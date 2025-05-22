@@ -14,7 +14,7 @@ class MyPlanner:
 
         dX, dY, dZ = np.meshgrid([-1,0,1], [-1,0,1], [-1,0,1])
         dR = np.vstack((dX.flatten(), dY.flatten(), dZ.flatten()))
-        dR = np.delete(dR, 13, axis=1)          # 去掉 (0,0,0)
+        dR = np.delete(dR, 13, axis=1)          
         self.dR = dR / np.linalg.norm(dR, axis=0) * res
 
     def _key(self, p):
@@ -32,7 +32,7 @@ class MyPlanner:
         for it in range(max_iter):
             if not open_heap: break
             _, cur_key = heapq.heappop(open_heap)
-            if cur_key == goal_key: break       # 已到目标键
+            if cur_key == goal_key: break   
 
             cur = np.array(cur_key, dtype=float) * self.res
 
@@ -49,9 +49,8 @@ class MyPlanner:
                     heapq.heappush(open_heap, (f, nbr_key))
 
         else:
-            return None  # 超过 max_iter
+            return None  
 
-        # 重建
         path = []
         node = goal_key
         while node != start_key:

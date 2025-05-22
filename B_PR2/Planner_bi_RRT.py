@@ -3,25 +3,10 @@ from collision_test import is_segment_collision_free
 
 
 class MyPlanner:
-    """Bi‑directional RRT planner.
-
-    Parameters
-    ----------
-    boundary : (6,) array‑like
-        [xmin, ymin, zmin, xmax, ymax, zmax].  The planner will only sample
-        configuration points inside this axis‑aligned box.
-    blocks : (M, 6) array‑like
-        A list of axis‑aligned rectangular obstacles.  Each obstacle is
-        [xmin, ymin, zmin, xmax, ymax, zmax].  The helper function
-        ``is_segment_collision_free`` is used for collision detection.
-    res : float, optional
-        Nominal step size for tree extension (default 0.5 m).  This is *not*
-        a grid resolution – the planner is fully continuous, but every new
-        vertex is at most ``res`` metres from its parent.
+    """
     step : float, optional
         If provided, overrides ``res`` as the extension length.
-    max_iter : int, optional
-        Maximum number of bidirectional expansion iterations (default 20 000).
+
     p_goal : float, optional
         Probability of directly sampling the opposite tree’s root when
         drawing a random sample (goal‑biasing, default 0.05).
@@ -52,9 +37,6 @@ class MyPlanner:
         self.max_iter = int(max_iter)
         self.p_goal = float(p_goal)
 
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
     def _inside(self, p: np.ndarray) -> bool:
         """Return True if point *p* lies strictly within the global boundary."""
         return bool(np.all(p >= self.boundary[:3]) and np.all(p <= self.boundary[3:6]))
@@ -87,9 +69,6 @@ class MyPlanner:
     def _collision_free(self, p: np.ndarray, q: np.ndarray) -> bool:
         return is_segment_collision_free(p, q, self.blocks, self.boundary)
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
     def plan(self, start, goal):
         """Plan a collision‑free path from *start* to *goal*.
         Returns
