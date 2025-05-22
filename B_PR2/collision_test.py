@@ -49,8 +49,8 @@ def is_segment_collision_free(p0, p1, blocks, boundary):
             return False
 
     # 2) 与每个障碍块检测线段–AABB 相交
-    #    假设 blocks[:, :6] 是 [xmin,ymin,zmin,xmax,ymax,zmax]
-    for blk in blocks[:, :6]:
+    #    假设 blocks[:,:6] 是 [xmin,ymin,zmin,xmax,ymax,zmax]
+    for blk in blocks[:,:6]:
         if segment_intersects_aabb(p0, p1, blk):
             return False
 

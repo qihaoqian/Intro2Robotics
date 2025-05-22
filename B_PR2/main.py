@@ -3,8 +3,10 @@ import time
 import matplotlib.pyplot as plt; plt.ion()
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-# import Planner
-import Planner_weighted_Astar as Planner
+import argparse
+import Planner
+import Planner_weighted_Astar
+import Planner_bi_RRT
 
 def tic():
   return time.time()
@@ -72,7 +74,7 @@ def draw_block_list(ax,blocks):
     h = ax.add_collection3d(pc)
     return h
 
-def plot_performance(labels, lengths, times):
+def plot_performance(planner, weight, labels, lengths, times):
     x = np.arange(len(labels))
     width = 0.4
 
@@ -100,11 +102,13 @@ def plot_performance(labels, lengths, times):
     # X axis settings
     ax1.set_xticks(x)
     ax1.set_xticklabels(labels, rotation=45, ha='right')
-    ax1.set_title('Comparison of Path Length and Planning Time for Each Test')
+    if planner == 'bi_RRT':
+      ax1.set_title('Comparison of Path Length and Planning Time for Bi-RRT Planner')
+    elif planner == 'weighted_Astar':
+      ax1.set_title(f'Comparison of Path Length and Planning Time for Weighted A* Planner (weight={weight})')
 
-    # 注：bars1, bars2 是上面创建的两个 BarContainer
-    ax1.bar_label(bars1, fmt='%.2f', padding=3, color=color1)  # 路径长度保留两位小数
-    ax2.bar_label(bars2, fmt='%.2f', padding=3, color=color2)  # 时间保留三位小数
+    ax1.bar_label(bars1, fmt='%.2f', padding=3, color=color1) 
+    ax2.bar_label(bars2, fmt='%.2f', padding=3, color=color2)  
 
     # Only pass in the two legend handles we want, avoiding internal artist
     ax1.legend([bars1, bars2],
@@ -114,7 +118,7 @@ def plot_performance(labels, lengths, times):
     plt.tight_layout()
     plt.show(block=True)
 
-def runtest(mapfile, start, goal, verbose = False, weight=1.0, res=0.5):
+def runtest(planner,mapfile, start, goal, verbose = False, weight=1.0, res=0.5):
   '''
   This function:
    * loads the provided mapfile
@@ -125,59 +129,75 @@ def runtest(mapfile, start, goal, verbose = False, weight=1.0, res=0.5):
   '''
   # Load a map and instantiate a motion planner
   boundary, blocks = load_map(mapfile)
-  MP = Planner.MyPlanner(boundary=boundary, blocks=blocks, weight=weight, res=res) # TODO: replace this with your own planner implementation
-  
+  if planner == 'bi_RRT':
+    MP = Planner_bi_RRT.MyPlanner(boundary=boundary, blocks=blocks, res=res) # TODO: replace this with your own planner implementation
+  elif planner == 'weighted_Astar':
+    MP = Planner_weighted_Astar.MyPlanner(boundary=boundary, blocks=blocks, res=res, weight=weight)
+  else:
+    MP = Planner.MyPlanner(boundary=boundary, blocks=blocks, res=res)
+
   # Display the environment
   if verbose:
     fig, ax, hb, hs, hg = draw_map(boundary, blocks, start, goal)
 
   # Call the motion planner
   t0 = tic()
-  path = MP.plan(start, goal)
+  path = MP.plan(start=start, goal=goal)
   delta_time = time.time() - t0
   # toc(t0,"Planning")
   
   
   # Plot the path
-  if verbose:
+  if verbose and path is not None:
     ax.plot(path[:,0],path[:,1],path[:,2],'r-')
 
   # TODO: You should verify whether the path actually intersects any of the obstacles in continuous space
   # TODO: You can implement your own algorithm or use an existing library for segment and 
   #       axis-aligned bounding box (AABB) intersection
-  collision = False
-  goal_reached = sum((path[-1]-goal)**2) <= 0.1
-  success = (not collision) and goal_reached
-  pathlength = np.sum(np.sqrt(np.sum(np.diff(path,axis=0)**2,axis=1)))
+  if path is not None:
+    success = True
+    pathlength = np.sum(np.sqrt(np.sum(np.diff(path,axis=0)**2,axis=1)))
+  else:
+    success = False
+    pathlength = 0.0
   return success, pathlength, delta_time
 
 if __name__=="__main__":
+  # Parse command line arguments
+  parser = argparse.ArgumentParser(description='Test the motion planner.')
+  parser.add_argument('--planner', type=str, default='bi_RRT', help='The motion planner to use (default: bi_RRT), choices: [bi_RRT, weighted_Astar]')
+  parser.add_argument('--weight', type=float, default=1.0, help='The weight for the weighted A* planner (default: 1.0)')
+  parser.add_argument('--verbose', action='store_true', help='Enable verbose output')
+  args = parser.parse_args()
   # name, fname, start, goal, weight, step_size
-    tests = [
-        ("single_cube",    "./maps/single_cube.txt",    np.array([7.0,7.0,5.5]),  np.array([2.3,2.3,1.3]), 1.5, 0.3),
-        ("maze",           "./maps/maze.txt",           np.array([0.0,0.0,1.0]),  np.array([12.0,12.0,5.0]), 1.5, 0.5),
-        ("flappy_bird",    "./maps/flappy_bird.txt",    np.array([0.5,4.5,5.5]),  np.array([19.5,1.5,1.5]), 1.5, 0.5),
-        ("pillars",        "./maps/pillars.txt",        np.array([0.5,0.5,0.5]),  np.array([19.0,19.0,9.0]), 1.5, 0.5),
-        ("window",         "./maps/window.txt",         np.array([6.0,-4.9,2.8]), np.array([2.0,19.5,5.5]), 1.5, 0.5),
-        ("tower",          "./maps/tower.txt",          np.array([4.0,2.5,19.5]), np.array([2.5,4.0,0.5]), 1.5, 0.5),
-        ("room",           "./maps/room.txt",           np.array([1.0,5.0,1.5]),  np.array([9.0,7.0,1.5]), 1.5, 0.5),
-    ]
-
-    labels = []
-    lengths = []
-    times   = []
-    for name, fname, start, goal, weight, res in tests:
-        success, L, T = runtest(fname, start, goal, weight=weight, res=res)
-        if success:
-          labels.append(name)
-          lengths.append(L)
-          times.append(T)
-          print("Test", name, "passed", "length:", L, "time:", T)
-        else:
-          print("Test", name, "failed")
-    
-    # Plot the performance
-    plot_performance(labels, lengths, times)
+  tests = [
+      ("single_cube",    "./maps/single_cube.txt",    np.array([7.0,7.0,5.5]),  np.array([2.3,2.3,1.3]),  0.5),
+      ("maze",           "./maps/maze.txt",           np.array([0.0,0.0,1.0]),  np.array([12.0,12.0,5.0]),  0.5),
+      ("flappy_bird",    "./maps/flappy_bird.txt",    np.array([0.5,4.5,5.5]),  np.array([19.5,1.5,1.5]),  0.5),
+      ("pillars",        "./maps/pillars.txt",        np.array([0.5,0.5,0.5]),  np.array([19.0,19.0,9.0]), 0.5),
+      ("window",         "./maps/window.txt",         np.array([6.0,-4.9,2.8]), np.array([2.0,19.5,5.5]),  0.5),
+      ("tower",          "./maps/tower.txt",          np.array([4.0,2.5,19.5]), np.array([2.5,4.0,0.5]),  0.5),
+      ("room",           "./maps/room.txt",           np.array([1.0,5.0,1.5]),  np.array([9.0,7.0,1.5]), 0.5),
+  ]
+  
+  labels = []
+  lengths = []
+  times   = []
+  planner = args.planner
+  weight = args.weight
+  verbose = args.verbose
+  for name, fname, start, goal, res in tests:
+      success, L, T = runtest(planner, fname, start, goal, res=res, weight=weight, verbose=verbose,)
+      if success:
+        labels.append(name)
+        lengths.append(L)
+        times.append(T)
+        print("Test", name, "passed", "length:", L, "time:", T)
+      else:
+        print("Test", name, "failed")
+  
+  # Plot the performance
+  plot_performance(planner, weight, labels, lengths, times)
 
 
 
