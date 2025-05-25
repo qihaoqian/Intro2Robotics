@@ -1,19 +1,45 @@
 # ECE276B PR2 Spring 2025
 
-## Overview
-In this assignment, you will implement and compare the performance of search-based and sampling-based motion planning algorithms on several 3-D environments.
+## 🚀 How to Run the Motion Planner
 
-### 1. main.py
-This file contains examples of how to load and display the environments and how to call a motion planner and plot the planned path. Feel free to modify this file to fit your specific goals for the project. In particular, you should certainly replace Line 104 with a call to a function which checks whether the planned path intersects the boundary or any of the blocks in the environment.
+This script runs a motion planning algorithm (Bi-RRT or weighted A*) with optional parameters for weight and verbosity.
 
-### 2. Planner.py
-This file contains an implementation of a baseline planner. The baseline planner gets stuck in complex environments and is not very careful with collision checking. Modify this file in any way necessary for your own implementation.
+### 📄 Usage
 
-### 3. astar.py
-This file contains a class defining a node for the A* algorithm as well as an incomplete implementation of A*. Feel free to continue implementing the A* algorithm here or start over with your own approach.
+```bash
+python main.py [--planner PLANNER] [--weight WEIGHT] [--verbose]
+```
 
-### 4. maps
-This folder contains 7 test environments described via a rectangular outer boundary and a list of rectangular obstacles. The start and goal points for each environment are specified in main.py.
+### 🧾 Arguments
+
+| Argument     | Type   | Default     | Description                                                                 |
+|--------------|--------|-------------|-----------------------------------------------------------------------------|
+| `--planner`  | string | `bi_RRT`    | The motion planner to use. Choices: `bi_RRT`, `weighted_Astar`.            |
+| `--weight`   | float  | `1.0`       | Weight used in weighted A* planner (ignored if using `bi_RRT`).            |
+| `--verbose`  | flag   | `False`     | If set, enables verbose output for debugging or detailed logging.          |
+
+### 💡 Examples
+
+- Run Bi-directional RRT (default):
+
+```bash
+python main.py
+```
+
+- Run weighted A* with custom weight:
+
+```bash
+python main.py --planner weighted_Astar --weight 1.5
+```
+
+- Enable verbose output:
+
+```bash
+python main.py --verbose
+```
+
+
+
 
 
 
