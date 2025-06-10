@@ -1,0 +1,11 @@
+module(
+    name = "labmaze",
+    version = "1.0",
+)
+
+bazel_dep(name = "bazel_skylib", version = "1.5.0")
+
+# 添加 Python 工具链
+python = use_extension("@bazel_tools//tools/python:extensions.bzl", "python")
+python.toolchain(python_version = "3.13")
+use_repo(python) 
