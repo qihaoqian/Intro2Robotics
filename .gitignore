@@ -19,6 +19,4 @@ Thumbs.db
 
 # 忽略数据
 __pycache__/
-data/
-pic/
-docs/
+# old/
