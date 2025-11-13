@@ -1,0 +1,85 @@
+
+<robot name="three_link_robot">
+		
+	<material name="black">
+		<color rgba="0 0 0 0.7"/>
+	</material>
+	<material name="white">
+		<color rgba="1 1 1 0.7"/>
+	</material>
+
+	<link name="base"/>
+	<link name="arm1">
+        <inertial>
+            <origin xyz="0 0 0.1" rpy="0 0 0" />
+            <mass value="0.0754"/>
+            <inertia ixx="0.000259" iyy="0.000259" izz="0.00001508" ixy="0" ixz="0" iyz="0" />
+        </inertial>
+		<visual>
+			<origin rpy="0 0 0" xyz = "0 0 0.1" />
+	        <geometry>
+	          <cylinder radius="0.02" length="0.2" />
+	        </geometry>
+			<material name="black"/>
+		</visual>
+	</link>
+
+	<joint name="baseHinge" type="revolute">
+		<axis rpy="0 0 0" xyz="0 0 1"/>
+		<parent link="base"/>
+		<child link="arm1"/>
+		<limit lower="-1000" upper="1000" effort="2000" velocity="1000"/>
+        <dynamics damping="0" friction="0"/>
+	</joint>
+
+	<link name="arm2">
+        <inertial>
+            <origin xyz="0.1 0 0" rpy="0 -1.57 0" />
+            <mass value="0.0754"/>
+            <inertia ixx="0.001036" iyy="0.001036" izz="0.0000151" ixy="0" ixz="0" iyz="0" />
+        </inertial>
+		<visual>
+			<origin rpy="0 -1.57 0" xyz = "0.1 0 0" />
+	        <geometry>
+	          <cylinder radius="0.02" length="0.2" />
+	        </geometry>
+			<material name="white"/>
+		</visual>
+	</link>
+
+	<joint name="interArm" type="revolute">
+		<axis rpy="0 0 0" xyz="0 0 1"/>
+		<parent link="arm1"/>
+		<child link="arm2"/>
+		<origin rpy="1.57 0 0" xyz="0 0 0.2"/>
+		<limit lower="-1000" upper="1000" effort="2000" velocity="1000"/>
+        <dynamics damping="0" friction="0" />
+	</joint>
+
+	<link name="arm3">
+        <inertial>
+            <origin xyz="0.1 0 0" rpy="0 1.57 0" />
+            <mass value="0.0754"/>
+            <inertia ixx="0.001036" iyy="0.001036" izz="0.0000151" ixy="0" ixz="0" iyz="0" />
+        </inertial>
+		<visual>
+			<origin rpy="0 1.57 0" xyz = "0.1 0 0" />
+	        <geometry>
+	          <cylinder radius="0.02" length="0.2" />
+	        </geometry>
+			<material name="white"/>
+		</visual>
+	</link>
+
+	<joint name="interArm2" type="revolute">
+		<axis rpy="0 0 0" xyz="0 0 1"/>
+		<parent link="arm2"/>
+		<child link="arm3"/>
+		<origin rpy="0 0 0" xyz="0.2 0 0"/>
+		<limit lower="-1000" upper="1000" effort="2000" velocity="1000"/>
+        <dynamics damping="0" friction="0" />
+	</joint>
+
+
+</robot>
+

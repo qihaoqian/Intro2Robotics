@@ -1,0 +1,20 @@
+Problem 6.1: Gravity Compensation with 3kg Tip Payload
+
+Configuration 1: θ = [0, 0, π/2]
+--------------------------------------------------
+Link gravity:    τ_links   = [-0.073966, -0.073966, -0.073966] N·m
+Payload gravity: τ_payload = [-11.772000, -5.886000, -0.000000] N·m
+Total torque:    τ_total   = [-11.845966, -5.959966, -0.073966] N·m
+
+Configuration 2: θ = [π/2, π/2, π/4]
+--------------------------------------------------
+Link gravity:    τ_links   = [-0.317527, 0.052302, 0.052302] N·m
+Payload gravity: τ_payload = [10.048031, 10.048031, 4.162031] N·m
+Total torque:    τ_total   = [9.730504, 10.100332, 4.214332] N·m
+
+Configuration 3: θ = [π/3, π/2, 0]
+--------------------------------------------------
+Link gravity:    τ_links   = [-0.468212, -0.147931, -0.036983] N·m
+Payload gravity: τ_payload = [7.251851, 10.194851, 5.097426] N·m
+Total torque:    τ_total   = [6.783639, 10.046920, 5.060443] N·m
+
