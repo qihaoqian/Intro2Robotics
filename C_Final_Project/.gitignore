@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+
+# 数据和模型
+data/
+models/
+*.h5
+*.pth
+*.ckpt
+
+# 视频和图像
+*.mp4
+*.avi
+*.png
+*.jpg
+*.jpeg
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# TensorBoard
+runs/
+logs/
+
+# 临时文件
+*.tmp
+*.bak
+*~

@@ -1,0 +1,17 @@
+========================================
+baseline ran 100 times, average results:
+Average cumulative reward: -18029.954
+Average Tracking Reward: -3217.465
+Average Energy Reward: -13605.689
+Average Step Penalty: -956.800
+Average Failure Reward: -250.000
+========================================
+
+========================================
+PPO-IBVS ran 100 times, average results:
+Average cumulative reward: -9859.780
+Average Tracking Reward: -2845.343
+Average Energy Reward: -5893.710
+Average Step Penalty: -933.000
+Average Failure Reward: -190.000
+========================================
