@@ -35,26 +35,39 @@ def is_segment_collision_free(p0, p1, blocks, boundary):
     """
     检查线段 p0->p1：
       1) 两端点都在 boundary 范围内
-      2) 不与任何 blocks 中的 AABB 相交
+      2) 不与任何 blocks 中的 AABB 相交（向量化 slab 检测，消除 Python 逐块循环）
     boundary 格式同上： [xmin, ymin, zmin, xmax, ymax, zmax]
     blocks 为形如 (n,6) 或 (n,9) 的数组，前 6 列即 AABB 坐标。
     """
-    # 先 flatten 到 1D 长度为 6 的向量：[xmin,ymin,zmin,xmax,ymax,zmax]
     b = np.asarray(boundary).reshape(-1)
-    # 1) 端点必须都在 boundary 内
     for P in (p0, p1):
         if not (b[0] <= P[0] <= b[3]
                 and b[1] <= P[1] <= b[4]
                 and b[2] <= P[2] <= b[5]):
             return False
 
-    # 2) 与每个障碍块检测线段–AABB 相交
-    #    假设 blocks[:,:6] 是 [xmin,ymin,zmin,xmax,ymax,zmax]
-    for blk in blocks[:,:6]:
-        if segment_intersects_aabb(p0, p1, blk):
-            return False
+    if len(blocks) == 0:
+        return True
 
-    return True
+    blks  = blocks[:, :6]   # (n, 6)
+    d     = p1 - p0          # (3,)
+    n     = len(blks)
+    t_min = np.zeros(n)
+    t_max = np.ones(n)
+
+    for i in range(3):
+        if abs(d[i]) < 1e-8:
+            # 平行于轴 i：起点不在该轴的 slab 内 → 无交点
+            outside = (p0[i] < blks[:, i]) | (p0[i] > blks[:, i + 3])
+            t_min[outside] = 2.0   # 强制 t_min > t_max，标记无交点
+        else:
+            t1 = (blks[:, i]     - p0[i]) / d[i]
+            t2 = (blks[:, i + 3] - p0[i]) / d[i]
+            np.maximum(t_min, np.minimum(t1, t2), out=t_min)
+            np.minimum(t_max, np.maximum(t1, t2), out=t_max)
+
+    # 任意一个 block 满足 t_min <= t_max → 有碰撞
+    return not np.any(t_min <= t_max)
 
 
 def is_path_collision_free(path, blocks, boundary):

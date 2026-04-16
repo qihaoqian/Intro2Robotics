@@ -36,18 +36,20 @@ class MyPlanner:
         if np.random.rand() < self.p_goal:
             # With small prob, sample the *root* of the opposite tree
             return root.copy()
-        lo, hi = self.boundary[:3], self.boundary[3:6]
-        return np.random.uniform(lo, hi)
+        return np.random.uniform(self.boundary[:3], self.boundary[3:6])
 
     @staticmethod
-    def _nearest(vertices: list[np.ndarray], q_rand: np.ndarray) -> int:
-        """Return index of the vertex in vertices that is closest to q_rand."""
-        dists = np.linalg.norm(np.asarray(vertices) - q_rand, axis=1)
+    def _nearest(V: np.ndarray, n: int, q_rand: np.ndarray) -> int:
+        """Return index of the vertex in V[:n] closest to q_rand.
+
+        V is a pre-allocated (cap, 3) array; only the first n rows are valid.
+        Avoids list→ndarray conversion on every call.
+        """
+        dists = np.linalg.norm(V[:n] - q_rand, axis=1)
         return int(dists.argmin())
 
     def _steer(self, q_near: np.ndarray, q_rand: np.ndarray) -> np.ndarray | None:
-        """Return a new configuration stepping from q_near toward q_rand.
-        """
+        """Return a new configuration stepping from q_near toward q_rand."""
         v = q_rand - q_near
         d = np.linalg.norm(v)
         if d < 1e-12:
@@ -57,67 +59,72 @@ class MyPlanner:
     def _collision_free(self, p: np.ndarray, q: np.ndarray) -> bool:
         return is_segment_collision_free(p, q, self.blocks, self.boundary)
 
-    def plan(self, start, goal):
-        start, goal = map(lambda x: np.asarray(x, dtype=float), (start, goal))
+    @staticmethod
+    def _backtrack(V: np.ndarray, P: np.ndarray, i: int) -> list:
+        """Collect vertices from index i back to the root (P[root] == -1)."""
+        pts = []
+        while i != -1:
+            pts.append(V[i].copy())
+            i = P[i]
+        return pts
 
-        # ≡ Two RRT trees: A rooted at start, B rooted at goal -------------
-        tree_a = {"V": [start], "P": [-1]}  # vertices, parent indices
-        tree_b = {"V": [goal], "P": [-1]}
+    def plan(self, start, goal):
+        start = np.asarray(start, dtype=float)
+        goal  = np.asarray(goal,  dtype=float)
+
+        # Pre-allocate vertex/parent arrays — avoids repeated list→ndarray copies
+        # in _nearest. cap is a safe upper bound; in practice trees stay far smaller.
+        cap = self.max_iter + 2
+
+        Va = np.empty((cap, 3), dtype=float); Va[0] = start; na = 1
+        Pa = np.full(cap, -1, dtype=np.int32)
+        Vb = np.empty((cap, 3), dtype=float); Vb[0] = goal;  nb = 1
+        Pb = np.full(cap, -1, dtype=np.int32)
+
+        a_is_start = True  # which tree is currently Va (rooted at start)
 
         for _ in range(self.max_iter):
-            # Extend Tree A toward a random sample
-            q_rand = self._sample(tree_b["V"][0])
-            idx_near = self._nearest(tree_a["V"], q_rand)
-            q_new = self._steer(tree_a["V"][idx_near], q_rand)
-            if q_new is None or not self._inside(q_new):
-                continue
-            if not self._collision_free(tree_a["V"][idx_near], q_new):
+            # ── Extend Tree A toward a random sample biased to root of B ──
+            q_rand   = self._sample(Vb[0])
+            i_near_a = self._nearest(Va, na, q_rand)
+            q_new    = self._steer(Va[i_near_a], q_rand)
+            if q_new is None or not self._inside(q_new) or \
+               not self._collision_free(Va[i_near_a], q_new):
+                # Swap even on failure to keep growth balanced
+                Va, Pa, na, Vb, Pb, nb, a_is_start = \
+                    Vb, Pb, nb, Va, Pa, na, not a_is_start
                 continue
 
-            tree_a["V"].append(q_new)
-            tree_a["P"].append(idx_near)
-            idx_new_a = len(tree_a["V"]) - 1
+            Va[na] = q_new;  Pa[na] = i_near_a;  i_new_a = na;  na += 1
 
-            # Try to connect Tree B toward the new node
-            idx_near_b = self._nearest(tree_b["V"], q_new)
-            q_cur = tree_b["V"][idx_near_b]
-            idx_parent = idx_near_b
+            # ── Greedy-connect Tree B toward the new node ──
+            i_near_b  = self._nearest(Vb, nb, q_new)
+            q_cur     = Vb[i_near_b].copy()
+            i_last_b  = i_near_b
             connected = False
 
             while True:
                 q_next = self._steer(q_cur, q_new)
-                if q_next is None:
+                if q_next is None or not self._collision_free(q_cur, q_next):
                     break
-                if not self._collision_free(q_cur, q_next):
-                    break
-                # Add q_next to Tree B
-                tree_b["V"].append(q_next)
-                tree_b["P"].append(idx_parent)
-                idx_parent = len(tree_b["V"]) - 1
+                Vb[nb] = q_next;  Pb[nb] = i_last_b;  i_last_b = nb;  nb += 1
                 q_cur = q_next
-                # Trees meet?
                 if np.linalg.norm(q_cur - q_new) < self.step * 0.5:
                     connected = True
-                    idx_connect_b = idx_parent
                     break
 
             if connected:
-                # A-side: Reverse the sequence after backtracking
-                path_a = []
-                idx = idx_new_a
-                while idx != -1:
-                    path_a.append(tree_a["V"][idx])    
-                    idx = tree_a["P"][idx]
-                path_a.reverse()                        
+                path_a = self._backtrack(Va, Pa, i_new_a)   # [q_new, …, root_a]
+                path_b = self._backtrack(Vb, Pb, i_last_b)  # [q_connect, …, root_b]
+                if a_is_start:
+                    # root_a=start, root_b=goal → start→…→q_new + q_connect→…→goal
+                    return np.vstack(path_a[::-1] + path_b)
+                else:
+                    # root_a=goal, root_b=start → start→…→q_connect + q_new→…→goal
+                    return np.vstack(path_b[::-1] + path_a)
 
-                # B-side: Keep the order of backtracking
-                path_b = []
-                idx = idx_connect_b
-                while idx != -1:
-                    path_b.append(tree_b["V"][idx])
-                    idx = tree_b["P"][idx]
-
-                # Concatenate
-                return np.vstack((path_a + path_b))
+            # ── Swap trees for balanced bidirectional growth ──
+            Va, Pa, na, Vb, Pb, nb, a_is_start = \
+                Vb, Pb, nb, Va, Pa, na, not a_is_start
 
         return None  # No path found

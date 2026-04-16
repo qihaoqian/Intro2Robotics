@@ -41,7 +41,7 @@ class MyPlanner:
                 nbr_key = self._key(nbr)
                 if not is_segment_collision_free(cur, nbr, self.blocks, self.boundary):
                     continue
-                tentative_g = g_score[cur_key] + np.linalg.norm(d)
+                tentative_g = g_score[cur_key] + self.res
                 if tentative_g < g_score.get(nbr_key, np.inf):
                     came_from[nbr_key] = cur_key
                     g_score[nbr_key]   = tentative_g

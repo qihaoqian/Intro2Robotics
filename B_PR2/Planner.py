@@ -30,10 +30,10 @@ class MyPlanner:
           continue
         
         valid = True
-        for k in range(self.blocks.shape[0]):
-          if( next[0] >= self.blocks[k,0] and next[0] <= self.blocks[k,3] and\
-              next[1] >= self.blocks[k,1] and next[1] <= self.blocks[k,4] and\
-              next[2] >= self.blocks[k,2] and next[2] <= self.blocks[k,5] ):
+        for j in range(self.blocks.shape[0]):
+          if( next[0] >= self.blocks[j,0] and next[0] <= self.blocks[j,3] and\
+              next[1] >= self.blocks[j,1] and next[1] <= self.blocks[j,4] and\
+              next[2] >= self.blocks[j,2] and next[2] <= self.blocks[j,5] ):
             valid = False
             break
         if not valid:

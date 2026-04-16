@@ -1,0 +1,8 @@
+map,success,path_length,planning_time_s
+single_cube,True,8.3914,0.0079
+maze,True,135.3130,8.5663
+flappy_bird,True,42.6867,0.0742
+pillars,True,36.2322,0.0102
+window,True,28.1097,0.0116
+tower,True,44.8646,0.2128
+room,True,19.7476,0.0366
