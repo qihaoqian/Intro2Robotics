@@ -53,9 +53,10 @@ def car_next_state(time_step, cur_state, control, noise=True):
     theta = cur_state[2]
     rot_3d_z = np.array([[np.cos(theta), 0], [np.sin(theta), 0], [0, 1]])
     f = rot_3d_z @ control
-    w_xy = np.random.normal(0, sigma[0], 2)
+    w_x = np.random.normal(0, sigma[0], 1)
+    w_y = np.random.normal(0, sigma[1], 1)
     w_theta = np.random.normal(0, sigma[2], 1)
-    w = np.concatenate((w_xy, w_theta))
+    w = np.concatenate((w_x, w_y, w_theta))
     if noise:
         return cur_state + time_step * f.flatten() + w
     else:
@@ -158,10 +159,12 @@ def visualize(car_states, ref_traj, obstacles, t, time_step, save=False):
         blit=True,
         repeat=True,
     )
-    plt.show()
-
-    if save == True:
+    if save:
+        import os
+        os.makedirs("./fig", exist_ok=True)
         sim.save("./fig/animation" + str(time()) + ".gif", writer="ffmpeg", fps=15)
+
+    plt.show()
 
     return
 

@@ -65,7 +65,7 @@ def main():
         # Update current state
         cur_state = next_state
         # Loop time
-        t2 = utils.time()
+        t2 = time()
         print(cur_iter)
         print(t2 - t1)
         times.append(t2 - t1)

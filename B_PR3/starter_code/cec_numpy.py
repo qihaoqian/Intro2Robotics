@@ -99,45 +99,33 @@ class CEC:
 
         return cost
 
-    def obstacle_constraints(self, x: np.ndarray, t: int, e0: np.ndarray) -> np.ndarray:
-        """障碍物约束函数"""
+    def combined_constraints(self, x: np.ndarray, t: int, e0: np.ndarray) -> np.ndarray:
+        """合并障碍物与边界约束，仅计算一次轨迹"""
         trajectory = self.get_trajectory(x, t, e0)
         constraints = []
-        
+
         for _, pos in trajectory:
-            # 对每个障碍物
+            # 障碍物约束
             for obs in self.obstacles:
                 obs_center = np.array([obs[0], obs[1]])
                 obs_r = obs[2]
                 min_dist = obs_r + self.robot_radius
                 dist = np.sqrt(np.sum((pos - obs_center[:2])**2))
-                constraints.append(dist - min_dist)  # >= 0
-        
-        return np.array(constraints)
+                constraints.append(dist - min_dist - 1e-3)  # >= 0
+            # 地图边界约束
+            constraints.append(pos[0] - (-3 + self.robot_radius))  # 左边界 >= 0
+            constraints.append(3 - self.robot_radius - pos[0])     # 右边界 >= 0
+            constraints.append(pos[1] - (-3 + self.robot_radius))  # 下边界 >= 0
+            constraints.append(3 - self.robot_radius - pos[1])     # 上边界 >= 0
 
-    def boundary_constraints(self, x: np.ndarray, t: int, e0: np.ndarray) -> np.ndarray:
-        """边界约束函数"""
-        trajectory = self.get_trajectory(x, t, e0)
-        constraints = []
-        
-        for _, pos in trajectory:
-            # 左边界
-            constraints.append(pos[0] - (-3 + self.robot_radius))  # >= 0
-            # 右边界
-            constraints.append(3 - self.robot_radius - pos[0])     # >= 0
-            # 下边界
-            constraints.append(pos[1] - (-3 + self.robot_radius))  # >= 0
-            # 上边界
-            constraints.append(3 - self.robot_radius - pos[1])     # >= 0
-        
         return np.array(constraints)
 
     def get_initial_guess(self, t: int, e0: np.ndarray) -> np.ndarray:
         """生成更好的初始猜测"""
         if self.last_solution is not None:
             # 使用上一次的解，但将控制序列向前移动一步
-            x0 = np.zeros(self.T * 2)
-            x0[:-2] = self.last_solution[2:]  # 移除第一个控制输入，后面补零
+            x0 = np.tile([self.v_min, 0.0], self.T).astype(float)
+            x0[:-2] = self.last_solution[2:]  # 移除第一个控制输入，末尾补 [v_min, 0]
             return x0
         
         # 如果没有上一次的解，生成一个简单的初始猜测
@@ -165,15 +153,10 @@ class CEC:
         # 获取初始猜测
         x0 = self.get_initial_guess(t, e0)
 
-        # 定义非线性约束
-        obstacle_constraint = {
+        # 定义非线性约束（合并为单个函数，避免重复计算轨迹）
+        combined_constraint = {
             'type': 'ineq',
-            'fun': lambda x: self.obstacle_constraints(x, t, e0)
-        }
-        
-        boundary_constraint = {
-            'type': 'ineq',
-            'fun': lambda x: self.boundary_constraints(x, t, e0)
+            'fun': lambda x: self.combined_constraints(x, t, e0)
         }
 
         # 使用SLSQP求解器进行优化
@@ -183,13 +166,13 @@ class CEC:
             args=(t, e0, cur_ref_state),
             method='SLSQP',
             bounds=bounds,
-            constraints=[obstacle_constraint, boundary_constraint],
+            constraints=[combined_constraint],
             options={
                 'maxiter': 1000,     # 显著增加最大迭代次数
                 'ftol': 1e-6,        # 函数收敛容差
                 'eps': 1e-8,         # 数值微分步长
                 'disp': False,
-                'iprint': 1,         # 打印优化过程信息
+                'iprint': -1,        # 静默模式，不打印 Fortran 级别的优化信息
                 'finite_diff_rel_step': 1e-8  # 有限差分相对步长
             }
         )

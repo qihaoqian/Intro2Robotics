@@ -110,6 +110,10 @@ class CEC:
         opti.set_initial(U, 0)
         opti.set_initial(E, 0)
         # 求解
-        sol = opti.solve()
-        u_star = sol.value(U[:,0])
+        try:
+            sol = opti.solve()
+            u_star = sol.value(U[:, 0])
+        except Exception as e:
+            print(f"Warning: IPOPT failed ({e}), falling back to simple controller")
+            u_star = utils.simple_controller(cur_state, cur_ref_state)
         return u_star
