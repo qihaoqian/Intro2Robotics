@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Visual Servoing with Residual RL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Hero -->
+  <header class="hero">
+    <div class="container">
+      <div class="tag">ECE 276C · Robotics · Final Project</div>
+      <h1>Visual Servoing with<br/>Residual Reinforcement Learning</h1>
+      <p class="subtitle">
+        Combining classical Image-Based Visual Servoing (IBVS) with a PPO residual policy
+        to achieve more energy-efficient and robust eye-in-hand manipulation on a Franka Panda robot.
+      </p>
+      <div class="hero-links">
+        <a class="btn btn-primary" href="https://github.com/QihaoQian/Intro2Robotics/tree/main/C_Final_Project" target="_blank">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          Code
+        </a>
+        <a class="btn btn-secondary" href="../ECE276CFinalProject.pdf" target="_blank">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Paper
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Overview -->
+  <section class="section">
+    <div class="container narrow">
+      <h2 class="section-title">Overview</h2>
+      <p>
+        Traditional IBVS controllers rely purely on visual feature errors to compute velocity commands.
+        While effective in ideal conditions, they are sensitive to camera calibration errors, kinematic
+        singularities, and scene clutter. This project augments the classical pipeline with a
+        <strong>residual RL agent</strong> (PPO) that learns a multiplicative correction to IBVS commands
+        purely from interaction, without replacing the interpretable baseline controller.
+      </p>
+    </div>
+  </section>
+
+  <!-- Method -->
+  <section class="section bg-subtle">
+    <div class="container">
+      <h2 class="section-title">Method</h2>
+      <div class="method-grid">
+
+        <div class="method-card">
+          <div class="method-icon">🎯</div>
+          <h3>Baseline IBVS</h3>
+          <p>
+            An eye-in-hand camera detects visual feature points. The controller computes
+            a Jacobian-based velocity command to minimize pixel-space error between
+            current and target feature positions.
+          </p>
+          <div class="formula">v<sub>ibvs</sub> = −λ J<sup>+</sup> e</div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-icon">🤖</div>
+          <h3>Residual PPO Policy</h3>
+          <p>
+            A PPO agent observes a 23-dimensional state (visual error, depth, joint
+            state, IBVS command) and outputs a 6-dim residual coefficient. The final
+            command blends both signals.
+          </p>
+          <div class="formula">v<sub>cmd</sub> = v<sub>ibvs</sub> · (1 + 0.3 · tanh(a))</div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-icon">🏆</div>
+          <h3>Reward Design</h3>
+          <p>
+            The reward encourages accurate tracking while penalizing energy waste and
+            target loss, pushing the residual agent to complement — not override —
+            the classical controller.
+          </p>
+          <div class="reward-list">
+            <span class="reward-item bad">− Tracking error</span>
+            <span class="reward-item bad">− Joint velocity (energy)</span>
+            <span class="reward-item bad">− Step penalty</span>
+            <span class="reward-item bad">− Target lost</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Pipeline diagram -->
+      <div class="pipeline">
+        <div class="pipe-block sensor">Camera<br/><small>512×512 px</small></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-block controller">IBVS<br/><small>v<sub>ibvs</sub></small></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-block rl">PPO Agent<br/><small>residual α</small></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-block output">v<sub>cmd</sub><br/><small>6-DOF velocity</small></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-block robot">Franka Panda<br/><small>7-DOF arm</small></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Results -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">Results</h2>
+      <p class="section-sub">Averaged over <strong>100 episodes</strong> in PyBullet simulation.</p>
+
+      <div class="results-grid">
+        <!-- Cumulative Reward -->
+        <div class="result-card">
+          <div class="result-label">Cumulative Reward</div>
+          <div class="bar-group">
+            <div class="bar-row">
+              <span class="bar-name">Baseline</span>
+              <div class="bar-track">
+                <div class="bar baseline" style="width: 100%">
+                  <span class="bar-val">−18,030</span>
+                </div>
+              </div>
+            </div>
+            <div class="bar-row">
+              <span class="bar-name">PPO-IBVS</span>
+              <div class="bar-track">
+                <div class="bar ppo" style="width: 54.7%">
+                  <span class="bar-val">−9,860</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="improvement">+45.3% improvement</div>
+        </div>
+
+        <!-- Energy Cost -->
+        <div class="result-card">
+          <div class="result-label">Energy Cost (joint velocity penalty)</div>
+          <div class="bar-group">
+            <div class="bar-row">
+              <span class="bar-name">Baseline</span>
+              <div class="bar-track">
+                <div class="bar baseline" style="width: 100%">
+                  <span class="bar-val">−13,606</span>
+                </div>
+              </div>
+            </div>
+            <div class="bar-row">
+              <span class="bar-name">PPO-IBVS</span>
+              <div class="bar-track">
+                <div class="bar ppo" style="width: 43.3%">
+                  <span class="bar-val">−5,894</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="improvement">+56.7% more energy efficient</div>
+        </div>
+
+        <!-- Tracking Reward -->
+        <div class="result-card">
+          <div class="result-label">Tracking Reward</div>
+          <div class="bar-group">
+            <div class="bar-row">
+              <span class="bar-name">Baseline</span>
+              <div class="bar-track">
+                <div class="bar baseline" style="width: 100%">
+                  <span class="bar-val">−3,217</span>
+                </div>
+              </div>
+            </div>
+            <div class="bar-row">
+              <span class="bar-name">PPO-IBVS</span>
+              <div class="bar-track">
+                <div class="bar ppo" style="width: 88.4%">
+                  <span class="bar-val">−2,845</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="improvement">+11.6% better tracking</div>
+        </div>
+
+        <!-- Failure Rate -->
+        <div class="result-card">
+          <div class="result-label">Failure Penalty (target lost)</div>
+          <div class="bar-group">
+            <div class="bar-row">
+              <span class="bar-name">Baseline</span>
+              <div class="bar-track">
+                <div class="bar baseline" style="width: 100%">
+                  <span class="bar-val">−250</span>
+                </div>
+              </div>
+            </div>
+            <div class="bar-row">
+              <span class="bar-name">PPO-IBVS</span>
+              <div class="bar-track">
+                <div class="bar ppo" style="width: 76%">
+                  <span class="bar-val">−190</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="improvement">24% fewer failures</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tech Stack -->
+  <section class="section bg-subtle">
+    <div class="container narrow">
+      <h2 class="section-title">Tech Stack</h2>
+      <div class="tech-grid">
+        <div class="tech-item">
+          <div class="tech-name">PyBullet</div>
+          <div class="tech-role">Physics simulation</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-name">Stable-Baselines3</div>
+          <div class="tech-role">PPO implementation</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-name">PyTorch</div>
+          <div class="tech-role">Neural network backend</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-name">OpenCV</div>
+          <div class="tech-role">Feature detection</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-name">Franka Panda</div>
+          <div class="tech-role">7-DOF robot model</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-name">NumPy</div>
+          <div class="tech-role">Numerical computation</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Config -->
+  <section class="section">
+    <div class="container narrow">
+      <h2 class="section-title">Configuration</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Parameter</th><th>Value</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>CAMERA_WIDTH/HEIGHT</code></td><td>512 px</td><td>Image resolution</td></tr>
+            <tr><td><code>CAMERA_FOV</code></td><td>120°</td><td>Camera field of view</td></tr>
+            <tr><td><code>NUM_TARGETS</code></td><td>5</td><td>Random targets per episode</td></tr>
+            <tr><td><code>MAX_ITERATIONS</code></td><td>100</td><td>Max steps per episode</td></tr>
+            <tr><td><code>CONVERGENCE_THRESHOLD</code></td><td>3 px</td><td>Success threshold</td></tr>
+            <tr><td><code>OBS_DIM</code></td><td>23</td><td>Observation space dimension</td></tr>
+            <tr><td><code>ACT_DIM</code></td><td>6</td><td>Action space dimension</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <p>ECE 276C — Introduction to Robotics &nbsp;·&nbsp; UC San Diego</p>
+      <p class="footer-note">For educational and research purposes only.</p>
+    </div>
+  </footer>
+
+</body>
+</html>
