@@ -7,6 +7,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { curve: 'basis', useMaxWidth: true } });
+  </script>
 </head>
 <body>
 
@@ -24,7 +28,7 @@
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg>
           Code
         </a>
-        <a class="btn btn-secondary" href="../ECE276B_PR2.pdf" target="_blank">
+        <a class="btn btn-secondary" href="../report.pdf" target="_blank">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
           Report
         </a>
@@ -45,10 +49,12 @@
         a tower, and a room.
       </p>
       <p style="margin-top: 14px;">
-        Collision detection uses axis-aligned bounding box (AABB) segment tests. The comparison
-        reveals a clear trade-off: Bi-RRT is extremely fast on open spaces but fails on
-        topologically complex environments with narrow passages, while Weighted A* reliably
-        solves all cases at the cost of higher computation time.
+        Collision detection uses vectorized axis-aligned bounding box (AABB) segment tests via the
+        slab method. The improved Bi-RRT with a <strong>greedy-connect extension</strong> now
+        successfully solves all seven environments, including topologically complex ones. However,
+        a key trade-off remains: Bi-RRT finds significantly longer paths on narrow-passage maps
+        (maze: 135.3 vs. A*'s 91.9), while Weighted A* reliably produces near-optimal paths at
+        the cost of higher computation time on complex environments.
       </p>
     </div>
   </section>
@@ -64,10 +70,10 @@
           <h3>Bi-directional RRT</h3>
           <p>
             Grows two random trees simultaneously — one from the start, one from the goal —
-            and attempts to connect them. Goal-biased sampling (p<sub>goal</sub> = 0.05) steers
-            exploration toward the goal. Trees connect when the gap between a node from each
-            tree falls below 0.25 m. Fast on simple environments; struggles with narrow passages
-            where random samples rarely penetrate.
+            using goal-biased sampling (p<sub>goal</sub> = 0.05). After each extension step,
+            a <strong>greedy-connect</strong> phase steps the opposite tree toward the new node
+            until blocked or connected (gap &lt; step/2). Trees swap roles each iteration for
+            balanced growth. Fast on open spaces; finds longer paths on narrow passages.
           </p>
           <div class="formula">x<sub>new</sub> = steer(x<sub>rand</sub>, x<sub>near</sub>, step=0.5)</div>
         </div>
@@ -77,10 +83,10 @@
           <h3>Weighted A*</h3>
           <p>
             Searches a voxelized grid with resolution 0.5 m and 26-neighbor connectivity
-            (±1 in each axis). The weight parameter w ∈ {1.0, 1.3, 1.5, 2.0} scales the
+            (±1 in each axis). The weight parameter w ∈ {1.0, 1.2, 1.5} scales the
             heuristic: w = 1.0 is optimal A*, higher weights trade path quality for speed.
-            Guarantees a solution in all tested environments; significantly slower than
-            Bi-RRT on mazes due to the exhaustive grid expansion.
+            Guarantees a solution in all tested environments; slower on mazes due to exhaustive
+            grid expansion.
           </p>
           <div class="formula">f(n) = g(n) + w · ‖n − goal‖</div>
         </div>
@@ -93,7 +99,7 @@
         <div class="pipe-arrow">→</div>
         <div class="pipe-block controller">Sample / Grid<br/><small>RRT / A*</small></div>
         <div class="pipe-arrow">→</div>
-        <div class="pipe-block rl">Collision AABB<br/><small>segment test</small></div>
+        <div class="pipe-block rl">Collision AABB<br/><small>slab method</small></div>
         <div class="pipe-arrow">→</div>
         <div class="pipe-block output">Path Graph<br/><small>nodes / edges</small></div>
         <div class="pipe-arrow">→</div>
@@ -104,128 +110,263 @@
     </div>
   </section>
 
-  <!-- Results -->
+  <!-- Algorithm Flowcharts -->
   <section class="section">
     <div class="container">
-      <h2 class="section-title">Results</h2>
-      <p class="section-sub">Bi-RRT vs. Weighted A* (w = 1.0) across all seven test environments.</p>
+      <h2 class="section-title">Algorithm Flowcharts</h2>
+      <p class="section-sub">Step-by-step logic for both planners, including the greedy-connect extension in Bi-RRT.</p>
+      <div class="flowchart-grid">
 
-      <div class="table-wrap" style="margin-bottom: 0;">
+        <div class="flowchart-card">
+          <h3>🌳 Bi-directional RRT</h3>
+          <div class="mermaid">
+flowchart TD
+    S([Start]) --> I["Init: Va ← {start}, Vb ← {goal}"]
+    I --> L{"iter &lt; max_iter?"}
+    L -- No --> N([Return None])
+    L -- Yes --> SA["Sample q_rand\n(p=0.05 toward Vb root)"]
+    SA --> NA["q_near_a = nearest(Va, q_rand)"]
+    NA --> ST["q_new = steer(q_near_a, q_rand)\nstep = 0.5 m"]
+    ST --> CF{"Inside boundary &\ncollision-free?"}
+    CF -- "No → Swap" --> L
+    CF -- Yes --> ADD["Add q_new to Va"]
+    ADD --> GC["Greedy-connect: step Vb → q_new\nuntil blocked or gap &lt; step/2"]
+    GC --> CO{"Trees\nconnected?"}
+    CO -- Yes --> P([Return Path ✓])
+    CO -- No --> SW["Swap Va ↔ Vb"]
+    SW --> L
+
+    style S fill:#eff6ff,stroke:#2563eb,color:#1d4ed8
+    style N fill:#fef2f2,stroke:#dc2626,color:#b91c1c
+    style P fill:#f0fdf4,stroke:#16a34a,color:#15803d
+    style CF fill:#fffbeb,stroke:#d97706,color:#92400e
+    style CO fill:#fffbeb,stroke:#d97706,color:#92400e
+    style L fill:#fffbeb,stroke:#d97706,color:#92400e
+    style ADD fill:#f0fdf4,stroke:#86efac,color:#15803d
+          </div>
+        </div>
+
+        <div class="flowchart-card">
+          <h3>⭐ Weighted A*</h3>
+          <div class="mermaid">
+flowchart TD
+    S([Start]) --> I["Init heap: push (w·h(start), start)\ng(start) = 0"]
+    I --> HE{"Heap\nempty?"}
+    HE -- Yes --> N([Return None])
+    HE -- No --> PO["Pop cur with min f-score"]
+    PO --> GE{"cur == goal?"}
+    GE -- Yes --> P([Return Path ✓])
+    GE -- No --> EX["For each of 26 neighbors nbr\n(±1 in x, y, z) × res"]
+    EX --> CF{"Collision-free?\n(AABB slab test)"}
+    CF -- No --> MORE{"More\nneighbors?"}
+    CF -- Yes --> TG["tentative_g = g(cur) + res"]
+    TG --> BT{"tentative_g &lt; g(nbr)?"}
+    BT -- No --> MORE
+    BT -- Yes --> UP["Update came_from(nbr), g(nbr)\nf = tentative_g + w·‖nbr−goal‖\nPush (f, nbr) to heap"]
+    UP --> MORE
+    MORE -- Yes --> EX
+    MORE -- No --> HE
+
+    style S fill:#eff6ff,stroke:#2563eb,color:#1d4ed8
+    style N fill:#fef2f2,stroke:#dc2626,color:#b91c1c
+    style P fill:#f0fdf4,stroke:#16a34a,color:#15803d
+    style HE fill:#fffbeb,stroke:#d97706,color:#92400e
+    style GE fill:#fffbeb,stroke:#d97706,color:#92400e
+    style CF fill:#fffbeb,stroke:#d97706,color:#92400e
+    style BT fill:#fffbeb,stroke:#d97706,color:#92400e
+    style MORE fill:#fffbeb,stroke:#d97706,color:#92400e
+    style UP fill:#f0fdf4,stroke:#86efac,color:#15803d
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Results -->
+  <section class="section bg-subtle">
+    <div class="container">
+      <h2 class="section-title">Results</h2>
+      <p class="section-sub">Bi-RRT vs. Weighted A* (w = 1.0) across all seven test environments. All runs successful.</p>
+
+      <div class="table-wrap" style="margin-bottom: 28px;">
         <table>
           <thead>
             <tr>
               <th>Environment</th>
               <th>Bi-RRT</th>
-              <th>RRT Time</th>
+              <th>RRT Time (s)</th>
               <th>RRT Length</th>
               <th>Weighted A*</th>
-              <th>A* Time</th>
+              <th>A* Time (s)</th>
               <th>A* Length</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>Single Cube</td>
-              <td><code style="background:#f0fdf4;color:#15803d;">✓</code></td>
-              <td>0.004 s</td>
-              <td>7.80</td>
-              <td><code style="background:#f0fdf4;color:#15803d;">✓</code></td>
-              <td>0.011 s</td>
-              <td>8.08</td>
+              <td><span class="badge-ok">✓</span></td>
+              <td>0.008</td>
+              <td>8.39</td>
+              <td><span class="badge-ok">✓</span></td>
+              <td>0.010</td>
+              <td>7.98</td>
             </tr>
             <tr>
               <td>Maze</td>
-              <td><code style="background:#fef2f2;color:#b91c1c;">✗</code></td>
-              <td>0.747 s</td>
-              <td>—</td>
-              <td><code style="background:#f0fdf4;color:#15803d;">✓</code></td>
-              <td>23.04 s</td>
-              <td>91.72</td>
+              <td><span class="badge-ok">✓</span></td>
+              <td>8.566</td>
+              <td>135.31</td>
+              <td><span class="badge-ok">✓</span></td>
+              <td>8.918</td>
+              <td>91.99</td>
             </tr>
             <tr>
               <td>Flappy Bird</td>
-              <td><code style="background:#fef2f2;color:#b91c1c;">✗</code></td>
-              <td>0.341 s</td>
-              <td>—</td>
-              <td><code style="background:#f0fdf4;color:#15803d;">✓</code></td>
-              <td>5.20 s</td>
-              <td>29.31</td>
+              <td><span class="badge-ok">✓</span></td>
+              <td>0.074</td>
+              <td>42.69</td>
+              <td><span class="badge-ok">✓</span></td>
+              <td>2.500</td>
+              <td>28.80</td>
             </tr>
             <tr>
               <td>Pillars</td>
-              <td><code style="background:#fef2f2;color:#b91c1c;">✗</code></td>
-              <td>0.591 s</td>
-              <td>—</td>
-              <td><code style="background:#f0fdf4;color:#15803d;">✓</code></td>
-              <td>0.425 s</td>
+              <td><span class="badge-ok">✓</span></td>
+              <td>0.010</td>
+              <td>36.23</td>
+              <td><span class="badge-ok">✓</span></td>
+              <td>0.170</td>
               <td>32.49</td>
             </tr>
             <tr>
               <td>Window</td>
-              <td><code style="background:#fef2f2;color:#b91c1c;">✗</code></td>
-              <td>0.538 s</td>
-              <td>—</td>
-              <td><code style="background:#f0fdf4;color:#15803d;">✓</code></td>
-              <td>10.66 s</td>
-              <td>30.59</td>
+              <td><span class="badge-ok">✓</span></td>
+              <td>0.012</td>
+              <td>28.11</td>
+              <td><span class="badge-ok">✓</span></td>
+              <td>4.183</td>
+              <td>29.72</td>
             </tr>
             <tr>
               <td>Tower</td>
-              <td><code style="background:#f0fdf4;color:#15803d;">✓</code></td>
-              <td>0.018 s</td>
-              <td>20.00</td>
-              <td><code style="background:#f0fdf4;color:#15803d;">✓</code></td>
-              <td>9.40 s</td>
-              <td>32.90</td>
+              <td><span class="badge-ok">✓</span></td>
+              <td>0.213</td>
+              <td>44.86</td>
+              <td><span class="badge-ok">✓</span></td>
+              <td>2.116</td>
+              <td>32.85</td>
             </tr>
             <tr>
               <td>Room</td>
-              <td><code style="background:#f0fdf4;color:#15803d;">✓</code></td>
-              <td>0.009 s</td>
-              <td>9.00</td>
-              <td><code style="background:#f0fdf4;color:#15803d;">✓</code></td>
-              <td>0.783 s</td>
-              <td>13.31</td>
+              <td><span class="badge-ok">✓</span></td>
+              <td>0.037</td>
+              <td>19.75</td>
+              <td><span class="badge-ok">✓</span></td>
+              <td>0.242</td>
+              <td>13.68</td>
             </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="section-sub" style="margin-top: 0; margin-bottom: 16px;">Weighted A* — effect of weight parameter on planning time and path length.</p>
+      <div class="table-wrap" style="margin-bottom: 0;">
+        <table>
+          <thead>
+            <tr>
+              <th>Environment</th>
+              <th>w = 1.0 Time</th>
+              <th>w = 1.0 Length</th>
+              <th>w = 1.2 Time</th>
+              <th>w = 1.2 Length</th>
+              <th>w = 1.5 Time</th>
+              <th>w = 1.5 Length</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Single Cube</td><td>0.010 s</td><td>7.98</td><td>0.011 s</td><td>7.98</td><td>0.010 s</td><td>7.98</td></tr>
+            <tr><td>Maze</td><td>8.918 s</td><td>91.99</td><td>11.086 s</td><td>91.99</td><td>12.757 s</td><td>91.99</td></tr>
+            <tr><td>Flappy Bird</td><td>2.500 s</td><td>28.80</td><td>2.144 s</td><td>28.80</td><td>1.232 s</td><td>29.41</td></tr>
+            <tr><td>Pillars</td><td>0.170 s</td><td>32.49</td><td>0.073 s</td><td>32.08</td><td>0.060 s</td><td>31.89</td></tr>
+            <tr><td>Window</td><td>4.183 s</td><td>29.72</td><td>0.138 s</td><td>28.68</td><td>0.093 s</td><td>28.63</td></tr>
+            <tr><td>Tower</td><td>2.116 s</td><td>32.85</td><td>2.583 s</td><td>32.85</td><td>1.149 s</td><td>33.43</td></tr>
+            <tr><td>Room</td><td>0.242 s</td><td>13.68</td><td>0.186 s</td><td>13.68</td><td>0.164 s</td><td>13.68</td></tr>
           </tbody>
         </table>
       </div>
 
       <!-- Image gallery -->
       <div class="gallery">
-        <div class="gallery-subtitle">Bi-RRT Results</div>
+        <div class="gallery-subtitle">Bi-RRT — Path Visualizations</div>
         <div class="gallery-grid">
           <div class="gallery-item">
-            <img src="../comparision_results/bi_RRT.png" alt="Bi-RRT successful paths" />
-            <div class="gallery-caption">bi_RRT.png — Successful path visualization</div>
+            <img src="../results/bi_RRT/single_cube_path.png" alt="Bi-RRT single cube" loading="lazy"/>
+            <div class="gallery-caption">single_cube — 0.008 s · L = 8.39</div>
           </div>
           <div class="gallery-item">
-            <img src="../comparision_results/bi_RRT_window.png" alt="Bi-RRT window environment" />
-            <div class="gallery-caption">bi_RRT_window.png — Window environment</div>
+            <img src="../results/bi_RRT/maze_path.png" alt="Bi-RRT maze" loading="lazy"/>
+            <div class="gallery-caption">maze — 8.566 s · L = 135.31</div>
+          </div>
+          <div class="gallery-item">
+            <img src="../results/bi_RRT/flappy_bird_path.png" alt="Bi-RRT flappy bird" loading="lazy"/>
+            <div class="gallery-caption">flappy_bird — 0.074 s · L = 42.69</div>
+          </div>
+          <div class="gallery-item">
+            <img src="../results/bi_RRT/pillars_path.png" alt="Bi-RRT pillars" loading="lazy"/>
+            <div class="gallery-caption">pillars — 0.010 s · L = 36.23</div>
+          </div>
+          <div class="gallery-item">
+            <img src="../results/bi_RRT/window_path.png" alt="Bi-RRT window" loading="lazy"/>
+            <div class="gallery-caption">window — 0.012 s · L = 28.11</div>
+          </div>
+          <div class="gallery-item">
+            <img src="../results/bi_RRT/tower_path.png" alt="Bi-RRT tower" loading="lazy"/>
+            <div class="gallery-caption">tower — 0.213 s · L = 44.86</div>
+          </div>
+          <div class="gallery-item">
+            <img src="../results/bi_RRT/room_path.png" alt="Bi-RRT room" loading="lazy"/>
+            <div class="gallery-caption">room — 0.037 s · L = 19.75</div>
+          </div>
+          <div class="gallery-item">
+            <img src="../results/bi_RRT/performance.png" alt="Bi-RRT performance chart" loading="lazy"/>
+            <div class="gallery-caption">performance — time &amp; path length comparison</div>
           </div>
         </div>
 
-        <div class="gallery-subtitle">Weighted A* — Weight Comparison</div>
+        <div class="gallery-subtitle">Weighted A* (w = 1.0) — Path Visualizations</div>
         <div class="gallery-grid">
           <div class="gallery-item">
-            <img src="../comparision_results/Astar_weight_1.png" alt="A* weight 1.0" />
-            <div class="gallery-caption">Astar_weight_1.png — w = 1.0 (optimal A*)</div>
+            <img src="../results/weighted_Astar_w1.0/single_cube_path.png" alt="A* single cube" loading="lazy"/>
+            <div class="gallery-caption">single_cube — 0.010 s · L = 7.98</div>
           </div>
           <div class="gallery-item">
-            <img src="../comparision_results/Astar_weight_1.3.png" alt="A* weight 1.3" />
-            <div class="gallery-caption">Astar_weight_1.3.png — w = 1.3</div>
+            <img src="../results/weighted_Astar_w1.0/maze_path.png" alt="A* maze" loading="lazy"/>
+            <div class="gallery-caption">maze — 8.918 s · L = 91.99</div>
           </div>
           <div class="gallery-item">
-            <img src="../comparision_results/Astar_weight_1.5.png" alt="A* weight 1.5" />
-            <div class="gallery-caption">Astar_weight_1.5.png — w = 1.5</div>
+            <img src="../results/weighted_Astar_w1.0/flappy_bird_path.png" alt="A* flappy bird" loading="lazy"/>
+            <div class="gallery-caption">flappy_bird — 2.500 s · L = 28.80</div>
           </div>
           <div class="gallery-item">
-            <img src="../comparision_results/Astar_weight_2.png" alt="A* weight 2.0" />
-            <div class="gallery-caption">Astar_weight_2.png — w = 2.0 (fast, suboptimal)</div>
+            <img src="../results/weighted_Astar_w1.0/pillars_path.png" alt="A* pillars" loading="lazy"/>
+            <div class="gallery-caption">pillars — 0.170 s · L = 32.49</div>
           </div>
           <div class="gallery-item">
-            <img src="../comparision_results/weighted_Astar_flappy_bird.png" alt="Weighted A* flappy bird" />
-            <div class="gallery-caption">weighted_Astar_flappy_bird.png — Narrow corridor</div>
+            <img src="../results/weighted_Astar_w1.0/window_path.png" alt="A* window" loading="lazy"/>
+            <div class="gallery-caption">window — 4.183 s · L = 29.72</div>
+          </div>
+          <div class="gallery-item">
+            <img src="../results/weighted_Astar_w1.0/tower_path.png" alt="A* tower" loading="lazy"/>
+            <div class="gallery-caption">tower — 2.116 s · L = 32.85</div>
+          </div>
+          <div class="gallery-item">
+            <img src="../results/weighted_Astar_w1.0/room_path.png" alt="A* room" loading="lazy"/>
+            <div class="gallery-caption">room — 0.242 s · L = 13.68</div>
+          </div>
+          <div class="gallery-item">
+            <img src="../results/weighted_Astar_w1.0/performance.png" alt="A* performance chart" loading="lazy"/>
+            <div class="gallery-caption">performance — time &amp; path length comparison</div>
           </div>
         </div>
       </div>
@@ -233,7 +374,7 @@
   </section>
 
   <!-- Tech Stack -->
-  <section class="section bg-subtle">
+  <section class="section">
     <div class="container narrow">
       <h2 class="section-title">Tech Stack</h2>
       <div class="tech-grid">
@@ -251,14 +392,14 @@
         </div>
         <div class="tech-item">
           <div class="tech-name">Custom AABB</div>
-          <div class="tech-role">Collision detection</div>
+          <div class="tech-role">Vectorized collision detection</div>
         </div>
       </div>
     </div>
   </section>
 
   <!-- Configuration -->
-  <section class="section">
+  <section class="section bg-subtle">
     <div class="container narrow">
       <h2 class="section-title">Configuration</h2>
       <div class="table-wrap">
@@ -268,10 +409,12 @@
           </thead>
           <tbody>
             <tr><td><code>max_iter</code></td><td>500,000</td><td>Bi-RRT max iterations</td></tr>
-            <tr><td><code>step_size</code></td><td>0.5 m</td><td>RRT steer step length</td></tr>
+            <tr><td><code>step_size</code></td><td>0.5 m</td><td>RRT steer &amp; greedy-connect step</td></tr>
             <tr><td><code>p_goal</code></td><td>0.05</td><td>Goal-bias sampling probability</td></tr>
+            <tr><td><code>connect_thr</code></td><td>step / 2</td><td>Tree connection gap threshold</td></tr>
             <tr><td><code>grid_res</code></td><td>0.5 m</td><td>A* voxel grid resolution</td></tr>
             <tr><td>Connectivity</td><td>26-neighbor</td><td>±1 in x, y, z axes</td></tr>
+            <tr><td><code>weight w</code></td><td>1.0 / 1.2 / 1.5</td><td>A* heuristic inflation factor</td></tr>
           </tbody>
         </table>
       </div>
